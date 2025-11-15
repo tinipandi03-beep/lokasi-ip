@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Lacak Lokasi IP - Soft Red Dark</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            background: #000000;
+            overflow: hidden;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            position: relative;
+            perspective: 1200px;
+        }
+
+        body::before{
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(150,0,0,0.18), transparent 70%),
+                        radial-gradient(circle at 70% 70%, rgba(120,0,0,0.12), transparent 70%);
+            filter: blur(60px);
+            animation: move3D 10s infinite alternate ease-in-out;
+            z-index: -3;
+        }
+        @keyframes move3D { 0%{ transform: translateZ(-180px) translateX(-40px); opacity:.6 } 100%{ transform: translateZ(-250px) translateX(40px); opacity:1 } }
+
+        .particles { position:absolute; inset:0; overflow:hidden; z-index:-1; }
+        .particles span { position:absolute; width:5px; height:5px; background:rgba(200,50,50,0.45); border-radius:50%; box-shadow:0 0 10px rgba(200,50,50,0.35); animation:floatUp 12s linear infinite; }
+        @keyframes floatUp { 0%{ transform: translateY(100vh) scale(.5); opacity:0 } 50%{ opacity:.8 } 100%{ transform: translateY(-10vh) scale(1.1); opacity:0 } }
+
+        .container {
+            width:100%; max-width:500px; padding:35px; border-radius:18px;
+            background: rgba(255,255,255,0.03); backdrop-filter: blur(10px);
+            border:1px solid rgba(200,50,50,0.25); box-shadow:0 0 25px rgba(255,0,0,0.12);
+            animation: fadeUp 1.3s ease forwards; opacity:0; transform: rotateX(10deg);
+        }
+        @keyframes fadeUp { from{ opacity:0; transform:translateY(40px) rotateX(15deg) } to{ opacity:1; transform:translateY(0) rotateX(10deg) } }
+
+        .header h1 {
+            text-align:center; font-size:2.2rem; margin-bottom:6px;
+            background: linear-gradient(#b10000,#ff4d4d,#ffffff);
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+            text-shadow:0 0 12px rgba(255,0,0,0.3);
+        }
+        .copyright { text-align:center; color:#d8a5a5; font-size:.85rem; margin-bottom:20px; }
+
+        .input-group label { color:#ffbaba; margin-bottom:7px; display:block; font-size:.9rem; }
+        .url-input {
+            width:100%; padding:14px; border-radius:12px; border:1px solid rgba(180,0,0,0.4);
+            background: rgba(255,0,0,0.06); color:white; font-size:1rem; outline:none;
+        }
+
+        .download-btn {
+            width:100%; padding:16px; margin-top:12px; border-radius:12px; border:none;
+            font-size:1.2rem; font-weight:600; cursor:pointer;
+            background: linear-gradient(45deg,#8a0000,#c31616); color:white;
+            box-shadow:0 0 18px rgba(255,0,0,0.18); transition: .25s;
+        }
+        .download-btn:hover { transform: translateY(-2px); box-shadow:0 0 28px rgba(255,0,0,0.28); }
+
+        .loading-spinner { width:40px; height:40px; border:4px solid rgba(255,0,0,0.18); border-left:4px solid #c60000; border-radius:50%; animation:rotate 1s linear infinite; margin:auto; }
+        @keyframes rotate { 100% { transform: rotate(360deg); } }
+
+        .back-btn {
+            position: fixed; top: 18px; left: 18px; z-index: 99999; width:45px; height:45px;
+            background: rgba(255,0,0,0.15); border:1px solid rgba(255,0,0,0.35); backdrop-filter: blur(6px);
+            border-radius:50%; display:flex; align-items:center; justify-content:center; color:#ffbdbd;
+            font-size:20px; cursor:pointer; transition:.25s;
+        }
+        .back-btn:hover { transform: scale(1.06); background: rgba(255,0,0,0.22); }
+
+        /* Popup backdrop & box (modern) */
+        .popup-bg {
+            position: fixed; inset:0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+            display:none; align-items:center; justify-content:center; z-index:9999; animation:fadeIn .2s ease;
+        }
+        @keyframes fadeIn { from{ opacity:0 } to{ opacity:1 } }
+
+        .popup-box {
+            width: 92%; max-width: 480px; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,0,0,0.28); border-radius:18px; padding:18px; box-shadow:0 0 28px rgba(255,0,0,0.18);
+            transform-origin:center; animation: popScale .22s ease;
+        }
+        @keyframes popScale { from{ transform: scale(.85); opacity:0 } to{ transform: scale(1); opacity:1 } }
+
+        .popup-title { font-size:1.3rem; color:#ffdddd; text-align:center; margin-bottom:12px; }
+        .popup-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap:10px;
+        }
+        .popup-ip {
+            background: rgba(255,0,0,0.12); border:1px solid rgba(255,0,0,0.22); padding:10px; border-radius:10px;
+            color:#ffecec; font-size:.98rem; text-align:left; word-break:break-word;
+        }
+        .popup-actions { display:flex; gap:10px; margin-top:12px; }
+        .btn-map {
+            flex:1; padding:10px; border-radius:10px; border:none; background: linear-gradient(90deg,#ff3b3b,#a80000);
+            color:#fff; font-weight:600; cursor:pointer; box-shadow:0 0 12px rgba(255,0,0,0.2);
+        }
+        .btn-copy {
+            width:44px; border-radius:10px; border:none; background: rgba(255,255,255,0.03); color:#fff; cursor:pointer;
+            box-shadow:0 0 8px rgba(255,0,0,0.12);
+        }
+        .close-btn {
+            margin-top:12px; width:100%; padding:12px; border-radius:12px; border:none; background:#9b0000; color:white; font-size:1.05rem; font-weight:700; cursor:pointer;
+            box-shadow:0 0 15px rgba(255,0,0,0.18);
+        }
+
+        @media (max-width:420px){
+            .popup-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<a href="https://morgan-cwebsite.vercel.app" class="back-btn" title="Kembali ke Google">
+    <i class="fas fa-arrow-left"></i>
+</a>
+
+<div class="particles">
+    <span style="left:8%; animation-delay:0s"></span>
+    <span style="left:28%; animation-delay:.8s"></span>
+    <span style="left:48%; animation-delay:1.6s"></span>
+    <span style="left:68%; animation-delay:.4s"></span>
+    <span style="left:88%; animation-delay:1.2s"></span>
+</div>
+
+<div class="container">
+    <div class="header">
+        <h1>Lacak Lokasi IP</h1>
+        <div class="copyright">@FanzKings</div>
+    </div>
+
+    <div class="input-group">
+        <label>Masukkan IP Address</label>
+        <input type="text" id="ip" class="url-input" placeholder="contoh: 8.8.8.8">
+    </div>
+
+    <button id="btn" onclick="cekLokasi()" class="download-btn">
+        <i class="fas fa-map-marker-alt"></i> Lacak Lokasi
+    </button>
+
+    <div id="loading" style="display:none; text-align:center; margin-top:20px;">
+        <div class="loading-spinner"></div>
+        <p style="margin-top:10px; color:#ffb4b4;">Melacak lokasi...</p>
+    </div>
+</div>
+
+<!-- POPUP -->
+<div id="popup" class="popup-bg" aria-hidden="true">
+    <div class="popup-box" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
+        <div class="popup-title" id="popupTitle">Hasil Pelacakan Lokasi</div>
+
+        <div id="popupContent" class="popup-grid" aria-live="polite"></div>
+
+        <div class="popup-actions">
+            <button id="openMap" class="btn-map" type="button"><i class="fas fa-map"></i> GOOGLE MAP</button>
+            <button id="copyBtn" class="btn-copy" title="Copy IP"><i class="fas fa-copy"></i></button>
+        </div>
+
+        <button class="close-btn" onclick="closePopup()">Tutup</button>
+    </div>
+</div>
+
+<script>
+/* Validasi IP sederhana (IPv4). Akan menolak non-IP. */
+function isValidIPv4(ip) {
+    const re = /^(25[0-5]|2[0-4]\d|1?\d{1,2})(\.(25[0-5]|2[0-4]\d|1?\d{1,2})){3}$/;
+    return re.test(ip);
+}
+
+function showPopup() {
+    document.getElementById('popup').style.display = 'flex';
+    document.getElementById('popup').setAttribute('aria-hidden', 'false');
+}
+
+function closePopup() {
+    document.getElementById('popup').style.display = 'none';
+    document.getElementById('popup').setAttribute('aria-hidden', 'true');
+}
+
+/* Main function: ambil data dari ipwhois.app dan tampilkan */
+async function cekLokasi() {
+    const ipInput = document.getElementById('ip').value.trim();
+    if (!ipInput) return alert('Masukkan IP address dulu!');
+
+    // validasi IPv4 (jika mau dukung IPv6, bisa ditambah)
+    if (!isValidIPv4(ipInput)) return alert('Format IP tidak valid. Masukkan IPv4, contoh: 8.8.8.8');
+
+    const btn = document.getElementById('btn');
+    const loading = document.getElementById('loading');
+    const popupContent = document.getElementById('popupContent');
+    const openMap = document.getElementById('openMap');
+    const copyBtn = document.getElementById('copyBtn');
+
+    btn.disabled = true;
+    loading.style.display = 'block';
+    popupContent.innerHTML = '';
+
+    try {
+        const api = `https://ipwhois.app/json/${encodeURIComponent(ipInput)}`;
+        const res = await fetch(api);
+        const data = await res.json();
+
+        if (!data || data.success === false) {
+            throw new Error(data.message || 'Gagal mengambil data lokasi');
+        }
+
+        // Ambil field aman dengan fallback
+        const ip = data.ip ?? ipInput;
+        const country = data.country ?? data.country_name ?? '—';
+        const countryCode = data.country_code ?? data.country_code2 ?? '';
+        const region = data.region ?? data.region_name ?? data.province ?? '—';
+        const city = data.city ?? '—';
+        const isp = data.isp ?? data.connection?.isp ?? data.org ?? '—';
+        const lat = data.latitude ?? data.lat ?? data.location?.latitude ?? '';
+        const lon = data.longitude ?? data.lon ?? data.location?.longitude ?? '';
+        const timezone = (typeof data.timezone === 'object') ? (data.timezone.id ?? JSON.stringify(data.timezone)) : (data.timezone ?? data.time_zone ?? '—');
+
+        // Buat konten grid rapi
+        const items = [
+            { label: 'IP', value: ip },
+            { label: 'Negara', value: `${country}${countryCode ? ' ('+countryCode+')' : ''}` },
+            { label: 'Wilayah', value: region },
+            { label: 'Kota', value: city },
+            { label: 'ISP', value: isp },
+            { label: 'Latitude', value: lat || '—' },
+            { label: 'Longitude', value: lon || '—' },
+            { label: 'Zona Waktu', value: timezone }
+        ];
+
+        popupContent.innerHTML = items.map(i => `<div class="popup-ip"><strong>${i.label}:</strong> ${i.value}</div>`).join('');
+
+        // Siapkan tombol Google Map — hanya aktif kalau lat+lon ada
+        if (lat !== '' && lon !== '') {
+            openMap.disabled = false;
+            openMap.onclick = () => {
+                const q = `${lat},${lon}`;
+                window.open(`https://www.google.com/maps?q=${encodeURIComponent(q)}`, '_blank');
+            };
+        } else {
+            openMap.disabled = true;
+            openMap.onclick = null;
+        }
+
+        // Copy tombol untuk menyalin IP
+        copyBtn.onclick = () => {
+            navigator.clipboard?.writeText(ip).then(() => {
+                copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(()=> copyBtn.innerHTML = '<i class="fas fa-copy"></i>', 1200);
+            }).catch(()=> alert('Gagal menyalin'));
+        };
+
+        showPopup();
+
+    } catch (err) {
+        alert(err.message || 'Terjadi kesalahan');
+    } finally {
+        btn.disabled = false;
+        loading.style.display = 'none';
+    }
+}
+</script>
+</body>
+</html>
